@@ -1,65 +1,101 @@
-Particle[] parts = new Particle[1000];
+ArrayList<Firework> fireworks;
 
 void setup() {
-  size(600, 600);
-  for (int i = 0; i < parts.length; i++) {
-    parts[i] = new Particle();
-  }
-  parts[0] = new OddBallParticle();
+  size(800, 600);
+  fireworks = new ArrayList<Firework>();
+  frameRate(60);
 }
 
 void draw() {
   background(0);
-  for (int i = 0; i < parts.length; i++) {
-    parts[i].show();
-    parts[i].move();
+
+  for (int i = fireworks.size() - 1; i >= 0; i--) {
+    Firework firework = fireworks.get(i);
+    firework.update();
+    firework.show();
+    if (firework.done()) {
+      fireworks.remove(i);
+    }
   }
 }
 
 void mousePressed() {
-  for (int i = 0; i < parts.length; i++) {
-    parts[i] = new Particle();
-  }
-  parts[0] = new OddBallParticle();
+  fireworks.add(new Firework(mouseX, mouseY));
 }
 
 class Particle {
-  double myX, myY, Speed, Angle;
-  int myColor;
+  PVector position;
+  PVector velocity;
+  PVector acceleration;
+  float lifespan;
 
-  Particle() {
-    myX = myY = Math.random() * 600;
-    Angle = Math.random() * 2 * Math.PI;
-    Speed = Math.random() * 3;
-    myColor = color((int)(Math.random() * 256), (int)(Math.random() * 256), (int)(Math.random() * 256));
+  Particle(PVector l) {
+    position = l.copy();
+    acceleration = new PVector(0, 0.2);
+    velocity = new PVector(random(-2, 2), random(-5, 0));
+    lifespan = 255.0;
   }
 
-  void move() {
-    myX += Math.cos(Angle) * Speed;
-    myY += Math.sin(Angle) * Speed;
+  void applyForce(PVector force) {
+    acceleration.add(force);
   }
 
-  void show() {
-    fill(myColor);
-    ellipse((float)myX, (float)myY, 3.5, 3.5);
+  void update() {
+    velocity.add(acceleration);
+    position.add(velocity);
+    acceleration.mult(0);
+    lifespan -= 2.0;
+  }
+
+  void display() {
+    stroke(255, lifespan);
+    fill(255, lifespan);
+    ellipse(position.x, position.y, 8, 8);
+  }
+
+  boolean isDead() {
+    return lifespan < 0.0;
   }
 }
 
-class OddBallParticle extends Particle {
-  OddBallParticle() {
-    myX = myY = 150;
-    Angle = Math.random() * 2 * Math.PI;
-    Speed = Math.random() * 1;
-    myColor = color(250, 250, 250);
+class Firework {
+  ArrayList<Particle> particles;
+  PVector position;
+  PVector velocity;
+
+  Firework(float x, float y) {
+    particles = new ArrayList<Particle>();
+    position = new PVector(x, y);
+    velocity = new PVector(0, random(-12, -8));
+
+    int particleCount = int(random(100, 200));
+    for (int i = 0; i < particleCount; i++) {
+      particles.add(new Particle(position));
+    }
   }
 
-  void move() {
-    myX += Math.cos(Angle) * Speed;
-    myY += Math.sin(Angle) * Speed;
+  void applyForce(PVector force) {
+    for (Particle p : particles) {
+      p.applyForce(force);
+    }
+  }
+
+  void update() {
+    velocity.add(new PVector(0, 0.2));
+    position.add(velocity);
+    for (Particle p : particles) {
+      p.applyForce(new PVector(0, 0.2));
+      p.update();
+    }
   }
 
   void show() {
-    fill(myColor);
-    ellipse((float)myX, (float)myY, 10, 10);
+    for (Particle p : particles) {
+      p.display();
+    }
+  }
+
+  boolean done() {
+    return (velocity.y >= 0 && particles.isEmpty());
   }
 }
